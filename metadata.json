@@ -1,0 +1,5 @@
+{
+  "name": "Lumina Wood Interactive Demo",
+  "description": "A smart surface simulation with gesture recognition, light interaction physics, and adaptive menus on a wooden texture.",
+  "requestFramePermissions": []
+}

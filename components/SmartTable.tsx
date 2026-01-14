@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { Point, Ripple } from '../types';
+import { Ripple } from '../types';
 import { LONG_PRESS_DURATION } from '../constants';
 import { WoodBackground } from './WoodBackground';
 import { SmartMenu } from './SmartMenu';
@@ -10,7 +10,6 @@ export const SmartTable: React.FC = () => {
   const [ripples, setRipples] = useState<Ripple[]>([]);
   const [isPressed, setIsPressed] = useState(false);
   const [pressStart, setPressStart] = useState<number | null>(null);
-  const [pointerPos, setPointerPos] = useState<Point>({ x: 0, y: 0 });
   
   const [menuVisible, setMenuVisible] = useState(false);
   // New state to track if the menu has been fully "charged" and locked open
@@ -29,7 +28,6 @@ export const SmartTable: React.FC = () => {
     }
 
     const { clientX, clientY } = e;
-    setPointerPos({ x: clientX, y: clientY });
     setIsPressed(true);
     setPressStart(Date.now());
     
@@ -68,12 +66,6 @@ export const SmartTable: React.FC = () => {
     }
   };
 
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (isPressed) {
-      setPointerPos({ x: e.clientX, y: e.clientY });
-    }
-  };
-
   const addRipple = (x: number, y: number) => {
     const newRipple: Ripple = {
       id: Date.now(),
@@ -96,7 +88,6 @@ export const SmartTable: React.FC = () => {
       className="w-full h-full relative touch-none cursor-pointer select-none overflow-hidden"
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
-      onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerUp}
       onContextMenu={handleContextMenu}
     >
@@ -129,3 +120,8 @@ export const SmartTable: React.FC = () => {
     </div>
   );
 };
+
+interface Point {
+  x: number;
+  y: number;
+}

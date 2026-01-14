@@ -224,7 +224,7 @@ interface DetailViewProps {
 
 const DetailView: React.FC<DetailViewProps> = ({ 
   activeId, 
-  // onClose, // Removed unused prop to fix build error
+  onClose, 
   dragHandlers 
 }) => {
   const getSubButtons = () => {
@@ -325,7 +325,7 @@ const DetailView: React.FC<DetailViewProps> = ({
 
 // --- Main SmartMenu Component ---
 
-export const SmartMenu: React.FC<SmartMenuProps> = ({ originX, originY /*, onClose */ }) => {
+export const SmartMenu: React.FC<SmartMenuProps> = ({ originX, originY, onClose }) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   
   const hasInteractedWithLevel2 = useRef(false);

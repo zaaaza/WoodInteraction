@@ -2,7 +2,8 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutGrid, Car, Armchair, Square, 
-  Wind, Lock, Power, X, Fan, Sliders, Volume2
+  Wind, Lock, Power, X, Fan, Sliders, Volume2,
+  Sun, Signal, Bluetooth, Cast, BarChart3, CloudSnow, CheckCircle2
 } from 'lucide-react';
 import { MenuItem } from '../types';
 import { MENU_RADIUS } from '../constants';
@@ -59,29 +60,15 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ layout, onClose }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Determine Geometry based on the menu layout
-  // The 'Volume' item is the last one (index 4).
-  // The Arc should span from Item 0 to Item 3 (approx).
-  // The Close button stays at Item 4's position.
-  
   const TOTAL_ITEMS = 5;
-  // Calculate the angular step between items
   const range = layout.end - layout.start;
   const step = range / (TOTAL_ITEMS - 1);
 
-  // Angles
-  // Item 0 (Start of arc)
   const ARC_START_ANGLE = layout.start;
-  // Item 4 (Position of Close Button)
   const BUTTON_ANGLE = layout.end;
-  
-  // We want the arc to stop before it hits the button.
-  // Let's stop it roughly around the position of Item 3.5
-  const paddingSteps = 0.8; // Space between arc end and button
+  const paddingSteps = 0.8; 
   const ARC_END_ANGLE = layout.end - (step * paddingSteps);
 
-  // --- Interaction Logic ---
-  
-  // Interpolate angle for current volume
   const currentHandleAngle = ARC_START_ANGLE + (ARC_END_ANGLE - ARC_START_ANGLE) * volume;
   const handlePos = getRadialPos(currentHandleAngle, layout.radius);
   const buttonPos = getRadialPos(BUTTON_ANGLE, layout.radius);
@@ -92,13 +79,11 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ layout, onClose }) => {
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
     
-    // Calculate angle from center
     const dx = e.clientX - centerX;
     const dy = e.clientY - centerY;
     let angleRad = Math.atan2(dy, dx); 
     let angleDeg = (angleRad * 180) / Math.PI;
 
-    // Normalize angle
     const totalSpan = ARC_END_ANGLE - ARC_START_ANGLE;
     let relativeAngle = angleDeg - ARC_START_ANGLE;
     while (relativeAngle < -180) relativeAngle += 360;
@@ -127,7 +112,6 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ layout, onClose }) => {
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
-  // SVG Path Generation
   const describeArc = (x: number, y: number, radius: number, startAngle: number, endAngle: number) => {
       const start = getRadialPos(startAngle, radius);
       const end = getRadialPos(endAngle, radius);
@@ -150,10 +134,7 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ layout, onClose }) => {
       exit={{ opacity: 0, transition: { duration: 0.2 } }}
       className="absolute top-0 left-0 w-full h-full pointer-events-none flex items-center justify-center"
     >
-        {/* Center Origin Reference for absolute positioning */}
         <div className="absolute top-1/2 left-1/2 w-0 h-0 pointer-events-auto">
-            
-            {/* The Track (Clickable Area) */}
             <svg 
                 className="absolute overflow-visible" 
                 style={{ left: 0, top: 0, pointerEvents: 'auto', cursor: 'grab' }}
@@ -162,7 +143,6 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ layout, onClose }) => {
                 onPointerUp={handlePointerUp}
                 onPointerLeave={handlePointerUp}
             >
-               {/* Background Track */}
                <path 
                  d={describeArc(0, 0, layout.radius, ARC_START_ANGLE, ARC_END_ANGLE)}
                  fill="none"
@@ -171,8 +151,6 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ layout, onClose }) => {
                  strokeLinecap="round"
                  className="backdrop-blur-sm"
                />
-               
-               {/* Active Track */}
                <path 
                  d={describeArc(0, 0, layout.radius, ARC_START_ANGLE, currentHandleAngle)}
                  fill="none"
@@ -181,8 +159,6 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ layout, onClose }) => {
                  strokeLinecap="round"
                />
             </svg>
-
-            {/* The Handle */}
             <motion.div
                 className="absolute w-16 h-16 bg-white rounded-full shadow-[0_0_20px_rgba(255,255,255,0.4)] pointer-events-none flex items-center justify-center z-20"
                 style={{ 
@@ -192,8 +168,6 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ layout, onClose }) => {
                     y: "-50%",
                 }}
             />
-
-            {/* Close Button */}
             <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -209,7 +183,6 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ layout, onClose }) => {
             >
                 <X size={32} />
             </button>
-
         </div>
     </motion.div>
   );
@@ -227,6 +200,8 @@ const DetailView: React.FC<DetailViewProps> = ({
   activeId, 
   dragHandlers 
 }) => {
+  const isTable = activeId === 'table';
+
   const getSubButtons = () => {
     switch (activeId) {
       case 'seat':
@@ -241,6 +216,8 @@ const DetailView: React.FC<DetailViewProps> = ({
           { icon: <Wind size={32} />, label: '车窗' },
           { icon: <Car size={32} />, label: '后备箱' },
         ];
+      case 'table':
+        return []; // We handle buttons inside the main view for 'table'
       default:
         return [
           { icon: <Sliders size={32} />, label: '调节' },
@@ -251,11 +228,23 @@ const DetailView: React.FC<DetailViewProps> = ({
   };
 
   const subButtons = getSubButtons();
-  
   const isSeat = activeId === 'seat';
-  const containerClasses = isSeat 
-    ? "w-full aspect-video rounded-3xl flex items-center justify-center relative overflow-visible"
-    : "w-full aspect-video bg-white/15 backdrop-blur-md border border-white/40 rounded-3xl flex items-center justify-center relative overflow-hidden mix-blend-plus-lighter shadow-[0_0_80px_rgba(255,255,255,0.15)]";
+  
+  // Custom Styles for Table View buttons (Milky brown/grey)
+  const BTN_STYLE = "bg-[#a39081]/25 backdrop-blur-md rounded-[32px] flex items-center justify-center text-white/90 shadow-sm border border-white/5";
+  const ICON_BTN_STYLE = "w-20 h-20 bg-[#a39081]/25 backdrop-blur-md rounded-full flex items-center justify-center text-white/90 shadow-sm border border-white/5";
+
+  // Different container styles based on mode
+  let containerClasses = "";
+  if (isSeat) {
+    containerClasses = "w-full aspect-video rounded-3xl flex items-center justify-center relative overflow-visible";
+  } else if (isTable) {
+    // Table mode has NO background container, just transparent wrapper
+    containerClasses = "w-full flex flex-col gap-5 items-stretch relative overflow-visible";
+  } else {
+    // Default glass card
+    containerClasses = "w-full aspect-video bg-white/15 backdrop-blur-md border border-white/40 rounded-3xl flex items-center justify-center relative overflow-hidden mix-blend-plus-lighter shadow-[0_0_80px_rgba(255,255,255,0.15)]";
+  }
 
   return (
     <motion.div
@@ -263,13 +252,12 @@ const DetailView: React.FC<DetailViewProps> = ({
       animate={{ opacity: 1, scale: 1, y: 0, x: "-50%" }}
       exit={{ opacity: 0, scale: 0.9, y: 10, x: "-50%", transition: { duration: 0.15 } }}
       transition={{ type: "spring", stiffness: 350, damping: 25 }}
-      className="absolute bottom-full left-1/2 mb-6 flex flex-col items-center gap-6 w-[600px] pointer-events-auto origin-bottom cursor-move touch-none"
+      className={`absolute bottom-full left-1/2 mb-6 flex flex-col items-center gap-6 ${isTable ? 'w-[560px]' : 'w-[600px]'} pointer-events-auto origin-bottom cursor-move touch-none`}
       onPointerDown={dragHandlers.onPointerDown}
       onPointerMove={dragHandlers.onPointerMove}
       onPointerUp={dragHandlers.onPointerUp}
     >
       <div className={containerClasses}>
-        
         {isSeat ? (
            <div className="w-full h-full relative z-10 scale-125">
               <iframe 
@@ -281,6 +269,85 @@ const DetailView: React.FC<DetailViewProps> = ({
                   allowFullScreen
               />
            </div>
+        ) : isTable ? (
+           <>
+              {/* Row 1: Volume & Audio Source */}
+              <div className="flex gap-4 h-24">
+                {/* Volume Slider */}
+                <div className={`${BTN_STYLE} flex-1 justify-start px-8 relative overflow-hidden`}>
+                   <div className="absolute left-0 top-0 bottom-0 w-[40%] bg-white/10" />
+                   <Volume2 size={24} className="relative z-10" />
+                </div>
+                {/* Source Switcher */}
+                <div className={`${BTN_STYLE} flex-[1.5] justify-between px-2`}>
+                   <div className="h-20 flex-1 rounded-[24px] flex items-center justify-center text-white/90">
+                      <span className="text-base font-bold tracking-wider">车载</span>
+                   </div>
+                   <div className="flex items-center justify-center text-white/40 mx-1">
+                      <Volume2 size={16} />
+                   </div>
+                   <div className="h-20 flex-1 rounded-[24px] bg-white/10 flex items-center justify-center text-white shadow-sm border border-white/5">
+                      <span className="text-base font-bold tracking-wider">桌板</span>
+                   </div>
+                </div>
+              </div>
+
+              {/* Row 2: Brightness & Toggles */}
+              <div className="flex gap-4 h-24">
+                 {/* Brightness Slider */}
+                 <div className={`${BTN_STYLE} flex-[1.2] justify-start px-8 relative overflow-hidden`}>
+                    <div className="absolute left-0 top-0 bottom-0 w-[40%] bg-white/10" />
+                    <Sun size={24} className="relative z-10" />
+                 </div>
+                 {/* Circle Toggles */}
+                 <div className="flex gap-4">
+                    <div className={ICON_BTN_STYLE}><BarChart3 size={24} /></div>
+                    <div className={ICON_BTN_STYLE}><Bluetooth size={24} /></div>
+                 </div>
+              </div>
+
+              {/* Row 3: Action Buttons */}
+              <div className="flex gap-4 h-24">
+                 <div className={`${BTN_STYLE} flex-1 gap-3`}>
+                    <span className="text-base font-bold tracking-wider text-white/80">车控</span>
+                 </div>
+                 <div className={ICON_BTN_STYLE}>
+                    <Lock size={24} />
+                 </div>
+                 <div className={`${BTN_STYLE} flex-1 gap-3`}>
+                    <span className="text-base font-bold tracking-wider text-white/80">桌板</span>
+                 </div>
+              </div>
+
+              {/* Row 4 & 5: Notifications (No Background) */}
+              <div className="flex flex-col mt-4 gap-6 px-2">
+                 {/* Notification 1 */}
+                 <div className="flex items-center gap-5 text-white/80">
+                    <div className="w-16 h-16 rounded-full bg-[#a39081]/30 flex items-center justify-center">
+                       <CloudSnow size={28} className="text-white/90" />
+                    </div>
+                    <div className="flex flex-col flex-1">
+                       <span className="text-lg font-medium tracking-wide text-white/90">降雪天气</span>
+                       <span className="text-sm text-white/50 mt-1">2小时后暴雪达到3级</span>
+                    </div>
+                    <span className="text-xs text-white/40 font-medium tracking-wider">刚刚</span>
+                 </div>
+
+                 <div className="w-full h-px bg-white/10 mx-2" />
+
+                 {/* Notification 2 */}
+                 <div className="flex items-center gap-5 text-white/80">
+                    <div className="w-16 h-16 rounded-full bg-[#a39081]/30 flex items-center justify-center">
+                       <CheckCircle2 size={28} className="text-white/90" />
+                    </div>
+                    <div className="flex flex-col flex-1">
+                       <span className="text-lg font-medium tracking-wide text-white/90">应用安装完成</span>
+                       <span className="text-sm text-white/50 mt-1">四人对战</span>
+                    </div>
+                    <span className="text-xs text-white/40 font-medium tracking-wider">昨天 下午 6:24</span>
+                 </div>
+              </div>
+           </>
         ) : (
            <>
               <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-60 pointer-events-none" />
@@ -292,7 +359,6 @@ const DetailView: React.FC<DetailViewProps> = ({
               >
               Model
               </motion.div>
-              {/* Tech Decor for non-seat items */}
               <div className="absolute top-3 left-3 w-3 h-3 border-l-2 border-t-2 border-white/50 pointer-events-none z-20" />
               <div className="absolute top-3 right-3 w-3 h-3 border-r-2 border-t-2 border-white/50 pointer-events-none z-20" />
               <div className="absolute bottom-3 left-3 w-3 h-3 border-l-2 border-b-2 border-white/50 pointer-events-none z-20" />
@@ -328,10 +394,11 @@ export const SmartMenu: React.FC<SmartMenuProps> = ({ originX, originY /*, onClo
   
   const hasInteractedWithLevel2 = useRef(false);
   const [hasEntered, setHasEntered] = useState(false);
+  const [pos, setPos] = useState({ x: originX, y: originY });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
-    // Disable staggered entrance animation after a longer delay (1.6s)
-    // to match the 1.5s long-press wake up sequence.
     const timer = setTimeout(() => {
       setHasEntered(true);
     }, 1600);
@@ -343,10 +410,49 @@ export const SmartMenu: React.FC<SmartMenuProps> = ({ originX, originY /*, onClo
       hasInteractedWithLevel2.current = true;
     }
   }, [activeId]);
+
+  // --- Boundary Collision Detection & Auto-Positioning Logic ---
   
-  const [pos, setPos] = useState({ x: originX, y: originY });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragOffset = useRef({ x: 0, y: 0 });
+  const getBoundedPosition = (x: number, y: number) => {
+    const winW = window.innerWidth;
+    const winH = window.innerHeight;
+
+    // Dimensions of the Detail View
+    const DETAIL_W_HALF = 300; // Half of 600px width
+    const DETAIL_H_UPWARDS = 480; // Estimated height extending upwards
+    const PADDING = 40; 
+
+    let targetX = x;
+    let targetY = y;
+
+    // Horizontal Check
+    if (targetX - DETAIL_W_HALF < PADDING) {
+        targetX = DETAIL_W_HALF + PADDING;
+    } else if (targetX + DETAIL_W_HALF > winW - PADDING) {
+        targetX = winW - DETAIL_W_HALF - PADDING;
+    }
+
+    // Vertical Check (Detail view grows upwards)
+    if (targetY - DETAIL_H_UPWARDS < PADDING) {
+        targetY = DETAIL_H_UPWARDS + PADDING;
+    }
+    // Prevent bottom overflow
+    if (targetY > winH - PADDING) {
+        targetY = winH - PADDING;
+    }
+
+    return { x: targetX, y: targetY };
+  };
+
+  // 1. Check bounds when opening menu (activeId changes)
+  useEffect(() => {
+    if (activeId && activeId !== 'volume') {
+        const { x, y } = getBoundedPosition(pos.x, pos.y);
+        if (x !== pos.x || y !== pos.y) {
+            setPos({ x, y });
+        }
+    }
+  }, [activeId]);
 
   useEffect(() => {
     setPos({ x: originX, y: originY });
@@ -371,10 +477,17 @@ export const SmartMenu: React.FC<SmartMenuProps> = ({ originX, originY /*, onClo
     });
   };
 
+  // 2. Check bounds when releasing drag (Snap Back)
   const onPointerUp = (e: React.PointerEvent) => {
-    // Allows event to bubble to SmartTable to handle 'cancel' logic (hide menu if not locked)
     setIsDragging(false);
     e.currentTarget.releasePointerCapture(e.pointerId);
+    
+    if (activeId && activeId !== 'volume') {
+        const { x, y } = getBoundedPosition(pos.x, pos.y);
+        if (x !== pos.x || y !== pos.y) {
+            setPos({ x, y });
+        }
+    }
   };
 
   const dragHandlers: DragHandlers = { onPointerDown, onPointerMove, onPointerUp };
@@ -412,20 +525,15 @@ export const SmartMenu: React.FC<SmartMenuProps> = ({ originX, originY /*, onClo
     const isLinearView = activeId && activeId !== 'volume'; 
 
     if (isLinearView) {
-      // Static layout: centered row
-      // We center items around x=0 (the menu origin point).
-      const spacing = 80;
+      const spacing = 60;
       const centerOffset = (total - 1) / 2;
       const x = (index - centerOffset) * spacing;
-      
-      // Fixed Y position below the touch point/center.
       const y = 80; 
       
       return {
-        x,
-        y, 
-        scale: 0.6, // Uniform scale
-        opacity: 0.3, // Uniform opacity
+        x, y, 
+        scale: 0.6, 
+        opacity: 0.3, 
         zIndex: 10,
       };
     } else {
@@ -441,10 +549,8 @@ export const SmartMenu: React.FC<SmartMenuProps> = ({ originX, originY /*, onClo
       const ty = Math.sin(angleRad) * layout.radius;
       
       return {
-        x: tx,
-        y: ty,
-        scale: 1,
-        opacity: 1,
+        x: tx, y: ty,
+        scale: 1, opacity: 1,
         zIndex: 20,
       };
     }
@@ -457,9 +563,15 @@ export const SmartMenu: React.FC<SmartMenuProps> = ({ originX, originY /*, onClo
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, transition: { duration: 0.2 } }}
     >
-      <div 
+      <motion.div 
         className="absolute w-0 h-0 z-30 pointer-events-auto touch-none"
-        style={{ left: pos.x, top: pos.y }}
+        initial={{ x: pos.x, y: pos.y }}
+        animate={{ x: pos.x, y: pos.y }}
+        transition={{ 
+           type: "spring", 
+           stiffness: isDragging ? 9999 : 200, 
+           damping: isDragging ? 50 : 25 
+        }}
       >
         <div 
           className={`absolute -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full cursor-move ${isDragging ? 'cursor-grabbing' : ''}`}
@@ -486,11 +598,6 @@ export const SmartMenu: React.FC<SmartMenuProps> = ({ originX, originY /*, onClo
         <AnimatePresence>
           {MENU_ITEMS.map((item, index) => {
             const config = getItemConfig(index, MENU_ITEMS.length);
-            
-            // TARGET: Finish animation at ~1.5s (long press duration).
-            // Formula: (LastItemIndex * Stagger) + Duration = ~1.5
-            // 5 items (idx 0-4).
-            // (4 * 0.17) + 0.8 = 0.68 + 0.8 = 1.48s
             const STAGGER = 0.25; 
             const DURATION = 1;
             
@@ -534,7 +641,7 @@ export const SmartMenu: React.FC<SmartMenuProps> = ({ originX, originY /*, onClo
                     ? {
                         type: "spring",
                         duration: DURATION,
-                        bounce: 0.2, // Slightly reduced bounce for smoother "filling" of time
+                        bounce: 0.2,
                         delay: index * STAGGER
                       }
                     : {
@@ -560,16 +667,18 @@ export const SmartMenu: React.FC<SmartMenuProps> = ({ originX, originY /*, onClo
                     <div className="text-white drop-shadow-[0_0_15px_rgba(255,255,255,1)]">
                       {item.icon}
                     </div>
-                    <span className="mt-2 text-xs font-bold text-white tracking-widest opacity-80 drop-shadow-[0_0_5px_rgba(0,0,0,1)]">
-                      {item.label}
-                    </span>
+                    {!isLevel2 && (
+                        <span className="mt-2 text-xs font-bold text-white tracking-widest opacity-80 drop-shadow-[0_0_5px_rgba(0,0,0,1)]">
+                          {item.label}
+                        </span>
+                    )}
                   </motion.div>
               </motion.div>
             );
           })}
         </AnimatePresence>
 
-      </div>
+      </motion.div>
     </motion.div>
   );
 };

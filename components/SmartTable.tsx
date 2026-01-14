@@ -1,21 +1,23 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { Point, Ripple } from '../types';
+import { Ripple } from '../types';
 import { LONG_PRESS_DURATION } from '../constants';
 import { WoodBackground } from './WoodBackground';
 import { SmartMenu } from './SmartMenu';
 import { RippleEffect } from './RippleEffect';
+import { SuccessBurst } from './SuccessBurst';
 
 export const SmartTable: React.FC = () => {
   const [ripples, setRipples] = useState<Ripple[]>([]);
   const [isPressed, setIsPressed] = useState(false);
   const [pressStart, setPressStart] = useState<number | null>(null);
-  const [pointerPos, setPointerPos] = useState<Point>({ x: 0, y: 0 });
   
   const [menuVisible, setMenuVisible] = useState(false);
-  // New state to track if the menu has been fully "charged" and locked open
   const [menuLocked, setMenuLocked] = useState(false);
-  const [menuPos, setMenuPos] = useState<Point>({ x: 0, y: 0 });
+  const [menuPos, setMenuPos] = useState({ x: 0, y: 0 });
+  
+  // State to trigger the success burst animation
+  const [burstTimestamp, setBurstTimestamp] = useState<number | null>(null);
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -29,7 +31,6 @@ export const SmartTable: React.FC = () => {
     }
 
     const { clientX, clientY } = e;
-    setPointerPos({ x: clientX, y: clientY });
     setIsPressed(true);
     setPressStart(Date.now());
     
@@ -42,6 +43,10 @@ export const SmartTable: React.FC = () => {
     timerRef.current = setTimeout(() => {
       setIsPressed(false); 
       setMenuLocked(true); // Lock the menu open
+      
+      // Trigger the success light burst
+      setBurstTimestamp(Date.now());
+
       if (navigator.vibrate) navigator.vibrate(50);
     }, LONG_PRESS_DURATION);
   };
@@ -68,12 +73,6 @@ export const SmartTable: React.FC = () => {
     }
   };
 
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (isPressed) {
-      setPointerPos({ x: e.clientX, y: e.clientY });
-    }
-  };
-
   const addRipple = (x: number, y: number) => {
     const newRipple: Ripple = {
       id: Date.now(),
@@ -96,13 +95,12 @@ export const SmartTable: React.FC = () => {
       className="w-full h-full relative touch-none cursor-pointer select-none overflow-hidden"
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
-      onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerUp}
       onContextMenu={handleContextMenu}
     >
       <WoodBackground />
 
-      {/* 2D Effects Layer */}
+      {/* Layer 1: 2D Ripples (Bottom) */}
       <div className="absolute inset-0 z-10 pointer-events-none">
         <AnimatePresence mode="popLayout">
           {ripples.map((ripple) => (
@@ -111,7 +109,7 @@ export const SmartTable: React.FC = () => {
         </AnimatePresence>
       </div>
 
-      {/* UI Layer (Menu) */}
+      {/* Layer 2: UI Menu (Middle) */}
       <div className="absolute inset-0 z-20 pointer-events-none">
         <AnimatePresence>
           {menuVisible && (
@@ -122,6 +120,20 @@ export const SmartTable: React.FC = () => {
                 setMenuVisible(false);
                 setMenuLocked(false);
               }} 
+            />
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Layer 3: High Priority Effects (Burst) - Renders ON TOP of menu */}
+      <div className="absolute inset-0 z-30 pointer-events-none">
+         <AnimatePresence>
+          {burstTimestamp && (
+            <SuccessBurst 
+              key={burstTimestamp} 
+              x={menuPos.x} 
+              y={menuPos.y} 
+              onComplete={() => setBurstTimestamp(null)} 
             />
           )}
         </AnimatePresence>

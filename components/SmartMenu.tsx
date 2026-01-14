@@ -28,6 +28,7 @@ const MENU_ITEMS: MenuItem[] = [
 ];
 
 const GLOW_CLASS = "mix-blend-plus-lighter bg-neutral-900/40 border border-white/20 shadow-[0_0_40px_rgba(255,200,150,0.15)] backdrop-blur-[1px]";
+const DIMMED_CLASS = "bg-neutral-900/40 border border-white/10 backdrop-blur-[1px]"; // No glow, no blend mode
 
 // --- Helper Math ---
 const getRadialPos = (angleDeg: number, radius: number) => {
@@ -224,7 +225,6 @@ interface DetailViewProps {
 
 const DetailView: React.FC<DetailViewProps> = ({ 
   activeId, 
-  onClose, 
   dragHandlers 
 }) => {
   const getSubButtons = () => {
@@ -305,8 +305,6 @@ const DetailView: React.FC<DetailViewProps> = ({
         className="flex items-center gap-4 cursor-auto"
         onPointerDown={(e) => e.stopPropagation()} 
       >
-        {/* Close Button Removed */}
-
         {subButtons.map((btn, idx) => (
           <motion.button
             key={idx}
@@ -325,18 +323,18 @@ const DetailView: React.FC<DetailViewProps> = ({
 
 // --- Main SmartMenu Component ---
 
-export const SmartMenu: React.FC<SmartMenuProps> = ({ originX, originY, onClose }) => {
+export const SmartMenu: React.FC<SmartMenuProps> = ({ originX, originY /*, onClose */ }) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   
   const hasInteractedWithLevel2 = useRef(false);
   const [hasEntered, setHasEntered] = useState(false);
 
   useEffect(() => {
-    // Disable staggered entrance animation after a short delay
-    // so that subsequent layout changes (dragging to edge) are instant/synchronized
+    // Disable staggered entrance animation after a longer delay (1.6s)
+    // to match the 1.5s long-press wake up sequence.
     const timer = setTimeout(() => {
       setHasEntered(true);
-    }, 1000);
+    }, 1600);
     return () => clearTimeout(timer);
   }, []);
 
@@ -427,7 +425,7 @@ export const SmartMenu: React.FC<SmartMenuProps> = ({ originX, originY, onClose 
         x,
         y, 
         scale: 0.6, // Uniform scale
-        opacity: 0.6, // Uniform opacity
+        opacity: 0.3, // Uniform opacity
         zIndex: 10,
       };
     } else {
@@ -489,16 +487,21 @@ export const SmartMenu: React.FC<SmartMenuProps> = ({ originX, originY, onClose 
           {MENU_ITEMS.map((item, index) => {
             const config = getItemConfig(index, MENU_ITEMS.length);
             
-            const STAGGER = 0.15;
-            const DURATION = 0.9;
+            // TARGET: Finish animation at ~1.5s (long press duration).
+            // Formula: (LastItemIndex * Stagger) + Duration = ~1.5
+            // 5 items (idx 0-4).
+            // (4 * 0.17) + 0.8 = 0.68 + 0.8 = 1.48s
+            const STAGGER = 0.25; 
+            const DURATION = 1;
             
             const isEntryAnimation = !hasEntered && !activeId && !hasInteractedWithLevel2.current;
             const isVolumeActive = activeId === 'volume';
+            const isLevel2 = !!activeId && activeId !== 'volume';
 
             return (
               <motion.div
                 key={item.id}
-                className={`${GLOW_CLASS} absolute flex flex-col items-center justify-center overflow-hidden cursor-pointer rounded-full`}
+                className={`${isLevel2 ? DIMMED_CLASS : GLOW_CLASS} absolute flex flex-col items-center justify-center overflow-hidden cursor-pointer rounded-full`}
                 style={{
                   zIndex: config.zIndex,
                   x: "-50%",
@@ -531,7 +534,7 @@ export const SmartMenu: React.FC<SmartMenuProps> = ({ originX, originY, onClose 
                     ? {
                         type: "spring",
                         duration: DURATION,
-                        bounce: 0.3,
+                        bounce: 0.2, // Slightly reduced bounce for smoother "filling" of time
                         delay: index * STAGGER
                       }
                     : {
